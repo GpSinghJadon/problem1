@@ -15,7 +15,6 @@ class Solution:
     def excelToJson(self, filename, sheet_name):
         df = pd.read_excel(filename, sheet_name=sheet_name)
         data = df.to_json(orient='records')
-        print(self.config)
         try:
             with open(self.config['json_filename'], 'w+') as f:
                 f.write(data)
