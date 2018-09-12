@@ -13,9 +13,12 @@ class Solution:
         self.config = config
 
     def excelToJson(self, filename, sheet_name):
+        self.logger.info(f'reading excel file | {filename}')
         df = pd.read_excel(filename, sheet_name=sheet_name)
         data = df.to_json(orient='records')
+        del df
         try:
+            self.logger.info(f"writing json to file | {self.config['json_filename']}")
             with open(self.config['json_filename'], 'w+') as f:
                 f.write(data)
         except Exception as e:
@@ -25,7 +28,7 @@ class Solution:
         self.uploadJson('s.json')
 
     def uploadJson(self, filepath):
-        self.logger.debug('uploading json file to s3')
+        self.logger.debug('calling AWS S3 service')
         try:
             s3 = boto3.client('s3',
                               aws_access_key_id=self.config['aws_access_key'],
@@ -58,15 +61,18 @@ def loadConfig(filename, logger):
 def loadLogger():
     logger = logging.getLogger('solution')
     logger.setLevel(logging.INFO)
+    logger.addHandler(logging.StreamHandler())
     return logger
 
 
-def lambda_handler():
+def lambda_handler(event, context):
     logger = loadLogger()
+    logger.info('logger loaded')
     config = loadConfig('config.yaml', logger)
+    logger.info('config loaded')
     sol = Solution(config, logger)
     sol.excelToJson('ISO10383_MIC.xls', 'MICs List by CC')
 
 
 if __name__ == '__main__':
-    lambda_handler()
+    lambda_handler(1, 2)
