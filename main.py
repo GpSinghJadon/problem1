@@ -22,7 +22,7 @@ class Solution:
         except Exception as e:
             self.logger.error(f"cannot write into {self.config['json_filename']} file | {e.message}")
 
-        # upload s.json file to s3 bucket
+        # upload json file to s3 bucket
         self.uploadJson('s.json')
 
     def uploadJson(self, filepath):
@@ -37,7 +37,7 @@ class Solution:
         self.logger.info(f"Uploading {filepath} object to S3")
 
         try:
-            with open(filepath, 'r') as f:
+            with open(filepath, 'rb') as f:
                 s3.put_object(Bucket=self.config['bucket_name'],
                               Key=filepath,
                               Body=f.read()
