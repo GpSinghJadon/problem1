@@ -61,8 +61,12 @@ def loadLogger():
     return logger
 
 
-if __name__ == '__main__':
+def lambda_handler():
     logger = loadLogger()
     config = loadConfig('config.yaml', logger)
     sol = Solution(config, logger)
     sol.excelToJson('ISO10383_MIC.xls', 'MICs List by CC')
+
+
+if __name__ == '__main__':
+    lambda_handler()
