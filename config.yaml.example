@@ -1,4 +1,4 @@
 bucket_name: <bucket-name>
 aws_access_key: <access-key>
 aws_secret_access_key: <secret-key>
-json_filename: /tmp/s.json
+json_object_keyname: s.json

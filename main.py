@@ -25,7 +25,7 @@ class Solution:
             self.logger.error(f"cannot write into {self.config['json_filename']} file | {e.message}")
 
         # upload json file to s3 bucket
-        self.uploadJson('s.json')
+        return self.uploadJson('s.json')
 
     def uploadJson(self, filepath):
         self.logger.debug('calling AWS S3 service')
@@ -42,11 +42,13 @@ class Solution:
             with open(filepath, 'rb') as f:
                 s3.put_object(Bucket=self.config['bucket_name'],
                               Key=filepath,
-                              Body=f.read()
+                              Body=f.read(),
+                              ACL='public-read'
                               )
         except Exception as e:
             self.logger.error(f"not able to upload json file to {self.config['bucket_name']} bucket | {e.message}")
 
+        return f"https://s3-us-west-2.amazonaws.com/{self.config['bucket_name']}/{self.config['json_object_keyname']}"
 
 def loadConfig(filename, logger):
     try:
