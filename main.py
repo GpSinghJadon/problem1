@@ -2,7 +2,7 @@ import pandas as pd
 import logging
 import yaml
 import boto3
-import json
+import io
 
 
 class Solution:
@@ -15,54 +15,28 @@ class Solution:
         self.config = config
         self.response = {'error': True, 'response': ''}
 
+
     def excelToJson(self, filename, sheet_name):
         self.logger.info(f'reading excel file | {filename}')
-        df = pd.read_excel(filename, sheet_name=sheet_name)
-        data = df.to_json(orient='records')
-        del df
-        try:
-            self.logger.info(f"writing json to file | {self.config['json_filename']}")
-            with open(self.config['json_filename'], 'w+') as f:
-                f.write(data)
-        except Exception as e:
-            msg = f"cannot write into {self.config['json_filename']} file | {e.message}"
-            self.logger.error()
-            self.response['response'] = msg
+        data = pd.read_excel(filename, sheet_name=sheet_name).to_json(orient='records')
+        return self.uploadJson(data)
 
-        # upload json file to s3 bucket
-        return self.uploadJson('s.json')
-        # self.response['response'] = s3_url
-        # self.response['error'] = False
-
-    def uploadJson(self, filepath):
+    def uploadJson(self, data):
         self.logger.debug('calling AWS S3 service')
         try:
             s3 = boto3.client('s3',
                               aws_access_key_id=self.config['aws_access_key'],
                               aws_secret_access_key=self.config['aws_secret_access_key'])
-        except Exception as e:
-            msg = f"not able to call AWS S3 service | {e.message}"
-            self.logger.error(msg)
-            self.response['response'] = msg
-            return self.response
-
-        self.logger.info(f"Uploading {filepath} object to S3")
-
-        try:
-            with open(filepath, 'rb') as f:
-                s3.put_object(Bucket=self.config['bucket_name'],
-                              Key=filepath,
-                              Body=f.read(),
-                              ACL='public-read'
-                              )
+            data = io.BytesIO(bytearray(data, encoding='utf-8'))
+            s3.put_object(Bucket=self.config['bucket_name'], Key=self.config['json_object_keyname'], Body=data,
+                          ACL='public-read')
             self.response[
                 'response'] = f"https://s3-us-west-2.amazonaws.com/{self.config['bucket_name']}/{self.config['json_object_keyname']}"
             self.response['error'] = False
         except Exception as e:
-            msg = f"not able to upload json file to {self.config['bucket_name']} bucket | {e.message}"
+            msg = f"write json object in S3 | {e}"
             self.logger.error(msg)
             self.response['response'] = msg
-
         return self.response
 
 
@@ -71,7 +45,7 @@ def loadConfig(filename, logger):
         with open(filename) as f:
             config = yaml.safe_load(f)
     except Exception as e:
-        logger.error(f'not able to load the config file | {e.message}')
+        logger.error(f'not able to load the config file | {e}')
         config = False
     return config
 
@@ -79,7 +53,10 @@ def loadConfig(filename, logger):
 def loadLogger():
     logger = logging.getLogger('solution')
     logger.setLevel(logging.INFO)
-    logger.addHandler(logging.StreamHandler())
+    sh = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    sh.setFormatter(formatter)
+    logger.addHandler(sh)
     return logger
 
 
@@ -92,7 +69,7 @@ def lambda_handler(event, context):
 
     logger.info('config loaded')
     sol = Solution(config, logger)
-    return json.dumps(sol.excelToJson('ISO10383_MIC.xls', 'MICs List by CC'))
+    return sol.excelToJson('ISO10383_MIC.xls', 'MICs List by CC')
 
 
 if __name__ == '__main__':
