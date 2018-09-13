@@ -2,15 +2,18 @@ import pandas as pd
 import logging
 import yaml
 import boto3
+import json
 
 
 class Solution:
     logger = None
     config = None
+    response = None
 
     def __init__(self, config, logger):
         self.logger = logger
         self.config = config
+        self.response = {'error': True, 'response': ''}
 
     def excelToJson(self, filename, sheet_name):
         self.logger.info(f'reading excel file | {filename}')
@@ -22,10 +25,14 @@ class Solution:
             with open(self.config['json_filename'], 'w+') as f:
                 f.write(data)
         except Exception as e:
-            self.logger.error(f"cannot write into {self.config['json_filename']} file | {e.message}")
+            msg = f"cannot write into {self.config['json_filename']} file | {e.message}"
+            self.logger.error()
+            self.response['response'] = msg
 
         # upload json file to s3 bucket
         return self.uploadJson('s.json')
+        # self.response['response'] = s3_url
+        # self.response['error'] = False
 
     def uploadJson(self, filepath):
         self.logger.debug('calling AWS S3 service')
@@ -34,7 +41,10 @@ class Solution:
                               aws_access_key_id=self.config['aws_access_key'],
                               aws_secret_access_key=self.config['aws_secret_access_key'])
         except Exception as e:
-            self.logger.error(f'not able to call AWS S3 service | {e.message}')
+            msg = f"not able to call AWS S3 service | {e.message}"
+            self.logger.error(msg)
+            self.response['response'] = msg
+            return self.response
 
         self.logger.info(f"Uploading {filepath} object to S3")
 
@@ -45,10 +55,16 @@ class Solution:
                               Body=f.read(),
                               ACL='public-read'
                               )
+            self.response[
+                'response'] = f"https://s3-us-west-2.amazonaws.com/{self.config['bucket_name']}/{self.config['json_object_keyname']}"
+            self.response['error'] = False
         except Exception as e:
-            self.logger.error(f"not able to upload json file to {self.config['bucket_name']} bucket | {e.message}")
+            msg = f"not able to upload json file to {self.config['bucket_name']} bucket | {e.message}"
+            self.logger.error(msg)
+            self.response['response'] = msg
 
-        return f"https://s3-us-west-2.amazonaws.com/{self.config['bucket_name']}/{self.config['json_object_keyname']}"
+        return self.response
+
 
 def loadConfig(filename, logger):
     try:
@@ -71,10 +87,13 @@ def lambda_handler(event, context):
     logger = loadLogger()
     logger.info('logger loaded')
     config = loadConfig('config.yaml', logger)
+    if not config:
+        return {'response': 'not able to extract the credentials', 'error': True}
+
     logger.info('config loaded')
     sol = Solution(config, logger)
-    sol.excelToJson('ISO10383_MIC.xls', 'MICs List by CC')
+    return json.dumps(sol.excelToJson('ISO10383_MIC.xls', 'MICs List by CC'))
 
 
 if __name__ == '__main__':
-    lambda_handler(1, 2)
+    print(lambda_handler(1, 2))
