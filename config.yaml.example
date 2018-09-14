@@ -1,4 +1,8 @@
-bucket_name: <bucket-name>
-aws_access_key: <access-key>
-aws_secret_access_key: <secret-key>
+excel_url: https://www.iso20022.org/sites/default/files/ISO10383_MIC/ISO10383_MIC.xls
+excel_filepath: /tmp/ISO10383_MIC.xls
+aws_region: us-west-2
+bucket_name: prob1
+aws_access_key: <access_key>
+aws_secret_access_key: <secret>
+json_filename: /tmp/s.json
 json_object_keyname: s.json
