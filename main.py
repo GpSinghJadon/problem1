@@ -23,12 +23,13 @@ class Solution:
             self.logger.info(f"reading excel file | {self.config['excel_filepath']}")
             # read the excel sheet and convert the sheet to json
             data = pd.read_excel(self.config['excel_filepath'], sheet_name=sheet_name).to_json(orient='records')
-            # upload the json data to S3 object
+            # upload the json data to S3 object and get the s3 object URL
             return self.uploadJson(data)
         else:
             self.response['response'] = f"not able to write excel file from the URL"
             return self.response
 
+    # uploads the string parameter(data) to AWS S3 public bucket returns its URL
     def uploadJson(self, data):
         self.logger.debug('calling AWS S3 service')
         # make client of aws S3
@@ -93,6 +94,8 @@ def lambda_handler(event, context):
 
     logger.info('config loaded')
     sol = Solution(config, logger)
+
+    # get the url of the s3 json object uploaded.
     return sol.excelToJson('MICs List by CC')
 
 
